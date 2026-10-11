@@ -1,0 +1,27 @@
+From 6a65526d4d7219fef03c0c0c034b7b9ee0374923 Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Sun, 11 Oct 2026 23:59:46 +0200
+Subject: [PATCH] Name the devtmpfs mount for erlinit shutdown
+
+erlinit skips devtmpfs at shutdown by comparing the mount source name,
+not the filesystem type. Naming it "dev" makes erlinit try to unmount
+/dev while its console descriptors are still open. Use the same source
+name as a kernel-mounted devtmpfs.
+
+---
+ initramfs/usr/share/citronics-initramfs/functions.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/initramfs/usr/share/citronics-initramfs/functions.sh b/initramfs/usr/share/citronics-initramfs/functions.sh
+index d47634d..2306661 100755
+--- a/initramfs/usr/share/citronics-initramfs/functions.sh
++++ b/initramfs/usr/share/citronics-initramfs/functions.sh
+@@ -27,7 +27,7 @@ echo_kmsg() {
+ mount_proc_sys_dev() {
+     mount -t proc -o nodev,noexec,nosuid proc /proc || echo_kmsg "Couldn't mount /proc"
+     mount -t sysfs -o nodev,noexec,nosuid sysfs /sys || echo_kmsg "Couldn't mount /sys"
+-    mount -t devtmpfs -o mode=0755,nosuid dev /dev || echo_kmsg "Couldn't mount /dev"
++    mount -t devtmpfs -o mode=0755,nosuid devtmpfs /dev || echo_kmsg "Couldn't mount /dev"
+     mount -t tmpfs -o nosuid,nodev,mode=0755 run /run || echo_kmsg "Couldn't mount /run"
+ 
+     mkdir /config

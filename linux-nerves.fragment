@@ -1,0 +1,45 @@
+# Kernel config fragment for nerves_system_s3ve3g.
+#
+# The base config is linux-6.16.defconfig, the port's Buildroot board config
+# (buildroot-android board/s3ve3g/linux.config): postmarketOS's
+# config-postmarketos-qcom-msm8226.armv7 saved with savedefconfig, plus the
+# board's display, USB gadget, MUIC, reboot-mode and charger changes. It is
+# kept verbatim so the Buildroot port and this system stay comparable; the
+# Nerves deltas live here.
+#
+# Buildroot merges this on top and runs `olddefconfig`, so anything whose
+# dependencies are unmet is dropped rather than breaking the build.
+
+# --- Mounted before any module can load --------------------------------------
+#
+# The initramfs carries no modules: kernel + initramfs + DTB share the
+# 50 MiB lk2nd loads them into. squashfs is the rootfs, f2fs the application
+# data that erlinit mounts before anything runs modprobe. The boot slots are
+# ext2, mounted by the ext4 driver (EXT2_FS is off, EXT4_USE_FOR_EXT2=y).
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_LZ4=y
+CONFIG_F2FS_FS=y
+CONFIG_BLK_DEV_DM=y
+CONFIG_RD_GZIP=y
+
+# --- USB networking ----------------------------------------------------------
+#
+# g_ether, built in, owns the ChipIdea UDC from the moment the SM5502 MUIC
+# reports a cable, both for the initramfs recovery shell and for
+# VintageNetDirect on usb0 in the running system. It replaces the Buildroot
+# port's configfs ACM + NCM gadget.
+CONFIG_USB_ETH=y
+
+# --- Modules -----------------------------------------------------------------
+#
+# Compressed modules need a kmod built with the matching decompressor;
+# Nerves' kmod is not, so a compressed module silently fails to load.
+# CONFIG_MODULE_COMPRESS is not set
+#
+# Module signing buys nothing here: the modules ship inside a read-only
+# squashfs written as one image, and the key would change on every build,
+# which defeats BR2_REPRODUCIBLE. The lockdown LSM selects it, and does
+# nothing on this phone anyway (no secure boot, no lockdown=).
+# CONFIG_SECURITY_LOCKDOWN_LSM is not set
+# CONFIG_SECURITY_LOCKDOWN_LSM_EARLY is not set
+# CONFIG_MODULE_SIG is not set

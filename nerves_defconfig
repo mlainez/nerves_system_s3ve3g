@@ -1,0 +1,131 @@
+# Samsung Galaxy S III Neo (GT-I9301I): MSM8228 (msm8226 family), 4x Cortex-A7.
+BR2_arm=y
+BR2_cortex_a7=y
+BR2_ARM_FPU_NEON_VFPV4=y
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/nerves-project/toolchains/releases/download/v15.3.1/nerves_toolchain_armv7_nerves_linux_gnueabihf-linux_${shell uname -m}-15.3.1-3EB2D2F.tar.xz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="armv7-nerves-linux-gnueabihf"
+BR2_TOOLCHAIN_EXTERNAL_GCC_15=y
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_6_0=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+# BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+BR2_TOOLCHAIN_EXTERNAL_FORTRAN=y
+BR2_TOOLCHAIN_EXTERNAL_OPENMP=y
+BR2_TAR_OPTIONS="--no-same-owner"
+BR2_BACKUP_SITE="https://dl.nerves-project.org"
+# Debug symbols are stripped from the target either way, but they inflate
+# the staging sysroot and with it the published artifact.
+# BR2_ENABLE_DEBUG is not set
+BR2_GLOBAL_PATCH_DIR="${BR2_EXTERNAL_NERVES_PATH}/patches ${NERVES_DEFCONFIG_DIR}/patches"
+BR2_PACKAGE_OVERRIDE_FILE="${NERVES_DEFCONFIG_DIR}/local.mk"
+BR2_REPRODUCIBLE=y
+BR2_ROOTFS_SKELETON_CUSTOM=y
+BR2_ROOTFS_SKELETON_CUSTOM_PATH="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/skeleton"
+BR2_INIT_NONE=y
+# eudev, not plain devtmpfs. Nothing here runs udevd (erlinit and the OTP
+# release do the work, the initramfs uses busybox mdev), but multipath-tools
+# links against libudev, and multipath-tools is where kpartx comes from.
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+BR2_ROOTFS_DEVICE_TABLE="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/device_table.txt"
+BR2_ENABLE_LOCALE_WHITELIST="locale-archive"
+BR2_GENERATE_LOCALE="en_US.UTF-8"
+BR2_ROOTFS_OVERLAY="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/rootfs_overlay ${NERVES_DEFCONFIG_DIR}/rootfs_overlay"
+BR2_ROOTFS_POST_BUILD_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-build.sh ${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-createfs.sh"
+
+# Kernel: msm8226-mainline/linux, the fork postmarketOS ships for this SoC
+# family, at the commit behind tag v6.16.12-msm8226-u2. A tarball of the
+# commit rather than a git clone: Buildroot's git backend fetches every ref
+# of a Linux fork, and a moved tag cannot change what gets built.
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/msm8226-mainline/linux/archive/57a693c8bfc6ba8dd9f737b10b8fff2c6d3484c8.tar.gz"
+# Board patches (patches/linux, applied through BR2_GLOBAL_PATCH_DIR): the
+# s3ve3g device tree (display, eMMC, keys, USB/MUIC, reboot modes, reserved
+# firmware memory, charger, Wi-Fi/Bluetooth).
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="${NERVES_DEFCONFIG_DIR}/linux-6.16.defconfig"
+BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="${NERVES_DEFCONFIG_DIR}/linux-nerves.fragment"
+BR2_LINUX_KERNEL_XZ=y
+BR2_LINUX_KERNEL_DTS_SUPPORT=y
+BR2_LINUX_KERNEL_INTREE_DTS_NAME="qcom/qcom-msm8226-samsung-s3ve3g"
+BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
+# Deliberately NOT BR2_LINUX_KERNEL_INSTALL_TARGET: lk2nd reads the kernel
+# and DTB from the ext2 boot slot (scripts/create-boot-img.sh), so a copy in
+# the squashfs would be dead weight.
+
+# Busybox / base userland
+BR2_PACKAGE_BUSYBOX_CONFIG="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/busybox.config"
+# The applets the citronics initramfs and s3ve3g-bringup need (switch_root,
+# mdev, seq, ln, telnetd, ...) on top of the Nerves base config.
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="${NERVES_DEFCONFIG_DIR}/busybox-s3ve3g.fragment"
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_E2FSPROGS_RESIZE2FS=y
+BR2_PACKAGE_F2FS_TOOLS=y
+BR2_PACKAGE_KMOD=y
+BR2_PACKAGE_KMOD_TOOLS=y
+BR2_PACKAGE_LIBMNL=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_CA_CERTIFICATES=y
+# kpartx maps the Nerves subpartitions out of the stock userdata partition,
+# in the initramfs at boot.
+BR2_PACKAGE_MULTIPATH_TOOLS=y
+BR2_PACKAGE_PARTED=y
+
+# Wi-Fi: WCNSS/Pronto with a WCN3660 RF chip, driven by wcn36xx. Firmware
+# comes from the phone's own partitions at boot (s3ve3g-firmware).
+BR2_PACKAGE_WIRELESS_REGDB=y
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_AP_SUPPORT=y
+BR2_PACKAGE_WPA_SUPPLICANT_EAP=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPS=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_WPA_CLIENT_SO=y
+BR2_PACKAGE_WPA_SUPPLICANT_PASSPHRASE=y
+BR2_PACKAGE_WPA_SUPPLICANT_DEBUG_SYSLOG=y
+
+# Bluetooth: the same Pronto core, HCI over SMD (btqcomsmd).
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_TOOLS=y
+
+# Diagnostics usable from the IEx shell when the network is in doubt.
+BR2_PACKAGE_IW=y
+BR2_PACKAGE_ETHTOOL=y
+BR2_PACKAGE_STRACE=y
+BR2_PACKAGE_IPROUTE2=y
+BR2_PACKAGE_MMC_UTILS=y
+BR2_PACKAGE_I2C_TOOLS=y
+BR2_PACKAGE_EVTEST=y
+BR2_PACKAGE_DTC=y
+BR2_PACKAGE_DTC_PROGRAMS=y
+
+# Host helpers. genext2fs builds the ext2 boot image that lk2nd reads.
+BR2_PACKAGE_HOST_GENEXT2FS=y
+
+# Nerves bookkeeping
+BR2_NERVES_SYSTEM_NAME="nerves_system_s3ve3g"
+BR2_NERVES_ADDITIONAL_IMAGE_FILES="${NERVES_DEFCONFIG_DIR}/fwup.conf"
+BR2_PACKAGE_NBTTY=y
+BR2_PACKAGE_NERVES_CONFIG=y
+BR2_PACKAGE_NERVES_CONFIG_ACCEPT_RNG_NOTICE=y
+
+# Root filesystem: squashfs, A/B, nested inside the stock `userdata`
+# partition with the boot slots and the application data. LZ4 rather than
+# XZ: it decompresses several times faster for a modest size cost on four
+# 1.2 GHz Cortex-A7s.
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_LZ4=y
+# BR2_TARGET_ROOTFS_EXT2 is not set
+# BR2_TARGET_ROOTFS_TAR is not set
+
+# This system's own packages, see packages/README.md.
+BR2_PACKAGE_CITRONICS_INITRAMFS=y
+BR2_PACKAGE_UNUDHCPD=y
+BR2_PACKAGE_REBOOT_MODE=y
+BR2_PACKAGE_S3VE3G_FIRMWARE=y

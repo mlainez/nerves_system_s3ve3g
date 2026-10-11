@@ -1,0 +1,31 @@
+nerves_system_s3ve3g
+Copyright 2026 Marc Lainez
+
+This product includes software developed as part of the Nerves Project
+(https://github.com/nerves-project), licensed under Apache-2.0.
+
+The files in this repository are licensed under Apache-2.0 unless a file
+says otherwise. A *built* firmware image is an aggregate of many separately
+licensed components, and building one downloads and, in places, executes
+third-party source that is not covered by this repository's license:
+
+  * Linux kernel: GPL-2.0 WITH Linux-syscall-note.
+    Built from https://github.com/msm8226-mainline/linux, a fork of
+    mainline Linux. The kernel configuration in linux-6.16.defconfig
+    derives from postmarketOS's pmaports
+    (linux-postmarketos-qcom-msm8226), MIT. The device tree patches in
+    patches/linux are GPL-2.0, like the files they modify.
+
+  * Buildroot and the packages it builds: many licenses. Run
+    `make legal-info` in the Buildroot output directory for the manifest
+    of what a given build actually included.
+
+  * citronics-initramfs: https://github.com/Citronics/initramfs.
+    See that project's LICENSE. The patches under
+    packages/citronics-initramfs are Apache-2.0 as part of this work.
+
+  * unudhcpd: GPL-3.0, https://gitlab.postmarketos.org/postmarketOS/unudhcpd
+
+No proprietary firmware is part of this repository or of a built image.
+The WCNSS Wi-Fi/Bluetooth images and their calibration are read at boot
+from the phone's own stock partitions (see packages/s3ve3g-firmware).

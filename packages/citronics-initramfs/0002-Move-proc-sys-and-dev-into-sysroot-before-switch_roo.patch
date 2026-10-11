@@ -1,0 +1,36 @@
+From ed7f99edad72337ce430e7656b07e24ba16f64e6 Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Sun, 11 Oct 2026 23:59:46 +0200
+Subject: [PATCH] Move /proc, /sys and /dev into /sysroot before
+ switch_root
+
+busybox switch_root otherwise unmounts the initramfs devtmpfs as it
+pivots, leaving the new root with an empty /dev; erlinit then cannot
+resolve any /dev/<block> path.
+
+---
+ initramfs/usr/share/citronics-initramfs/init | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/initramfs/usr/share/citronics-initramfs/init b/initramfs/usr/share/citronics-initramfs/init
+index cc1aa6a..ee36f0d 100755
+--- a/initramfs/usr/share/citronics-initramfs/init
++++ b/initramfs/usr/share/citronics-initramfs/init
+@@ -56,6 +56,17 @@ if [ -n "$rootfs" ]; then
+         # echo_kmsg "Restore consoles to original state..."
+         # restore_consoles
+ 
++        echo_kmsg "Moving /proc, /sys, /dev into /sysroot before switch_root"
++        # Without this, busybox switch_root unmounts our initramfs
++        # devtmpfs as it pivots, leaving the new root with an empty
++        # /dev. erlinit then cannot resolve any /dev/<block> path and
++        # the kernel reboots.
++        mount --move /proc /sysroot/proc 2>/dev/null \
++            || echo_kmsg "  warn: /proc move failed"
++        mount --move /sys  /sysroot/sys  2>/dev/null \
++            || echo_kmsg "  warn: /sys move failed"
++        mount --move /dev  /sysroot/dev  2>/dev/null \
++            || echo_kmsg "  warn: /dev move failed"
+         echo_kmsg "Switching to /sysroot"
+         exec switch_root /sysroot /sbin/init
+     else

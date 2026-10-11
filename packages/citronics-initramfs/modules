@@ -1,0 +1,21 @@
+# Kernel modules to copy into the initramfs.
+#
+# Intentionally empty.
+#
+# linux-nerves.fragment makes everything on the path to switch_root
+# built in (=y):
+#
+#   CONFIG_SQUASHFS=y / CONFIG_SQUASHFS_LZ4=y  <- rootfs
+#   CONFIG_EXT4_FS=y (EXT4_USE_FOR_EXT2)       <- boot subpartition
+#   CONFIG_F2FS_FS=y                           <- application data
+#   CONFIG_BLK_DEV_DM=y                        <- kpartx
+#   CONFIG_USB_ETH=y                           <- USB net (g_ether)
+#   CONFIG_EXTCON_SM5502=y, CONFIG_I2C_GPIO=y  <- the UDC needs the MUIC
+#   CONFIG_MMC_SDHCI_MSM=y                     <- the eMMC itself
+#
+# Carrying .ko files here would only inflate the cpio.gz against the
+# 50 MiB lk2nd gives the kernel, initramfs and DTB together.
+#
+# If a future kernel revision flips one of the above to =m, list the
+# module here as a path relative to /lib/modules/<ver>/, for example
+#   kernel/fs/squashfs/squashfs.ko

@@ -1,0 +1,16 @@
+config BR2_PACKAGE_S3VE3G_FIRMWARE
+	bool "s3ve3g-firmware [Galaxy S III Neo]"
+	select BR2_PACKAGE_KMOD
+	select BR2_PACKAGE_KMOD_TOOLS
+	select BR2_PACKAGE_WIRELESS_REGDB
+	help
+	  Firmware plumbing for the Galaxy S III Neo. Ships no firmware.
+
+	  The WCNSS (Pronto) Wi-Fi/Bluetooth image lives on the phone's
+	  own `apnhlos` partition and its NV calibration on `system`; the
+	  MAC addresses live on `efs`. None of it may be redistributed, and
+	  every phone has its own. s3ve3g-bringup, run by erlinit before
+	  Erlang starts, links the images it finds on the read-only stock
+	  partitions into /run/firmware, points the kernel firmware loader
+	  there, copies the MAC addresses to /run/s3ve3g and loads the
+	  drivers.

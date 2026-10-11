@@ -1,0 +1,43 @@
+From dd22dcc1c1c03d77325d06b2d622396f7e8bca97 Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Sun, 11 Oct 2026 23:59:47 +0200
+Subject: [PATCH] Use the built-in g_ether gadget for the recovery network
+
+---
+ .../usr/share/citronics-initramfs/functions.sh   | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/initramfs/usr/share/citronics-initramfs/functions.sh b/initramfs/usr/share/citronics-initramfs/functions.sh
+index 2306661..0c38816 100755
+--- a/initramfs/usr/share/citronics-initramfs/functions.sh
++++ b/initramfs/usr/share/citronics-initramfs/functions.sh
+@@ -153,8 +153,16 @@ setup_usb_network() {
+ 	[ -e "$_marker" ] && return
+ 	touch "$_marker"
+ 	echo_kmsg "Setup usb network"
+-	modprobe libcomposite
+-	setup_usb_network_configfs
++	# g_ether is built into the kernel and owns the UDC. Recovery must use
++	# its interface rather than create a second configfs gadget. The UDC
++	# only appears once the SM5502 MUIC (on bit-banged I2C) and the PHY
++	# regulators have probed, so allow up to 30 s for usb0.
++	local attempts=0
++	while [ ! -e /sys/class/net/usb0 ] && [ "$attempts" -lt 300 ]; do
++		sleep 0.1
++		attempts=$((attempts + 1))
++	done
++	ifconfig usb0 up || echo_kmsg "g_ether usb0 is unavailable"
+ }
+ 
+ setup_usb_network_configfs() {
+@@ -230,7 +238,9 @@ start_unudhcpd() {
+ 	# Get usb interface
+ 	usb_network_function="${deviceinfo_usb_network_function:-ncm.usb0}"
+ 	usb_network_function_fallback="rndis.usb0"
+-	if [ -n "$(cat $CONFIGFS/g1/UDC)" ]; then
++	if [ -e /sys/class/net/usb0 ]; then
++		INTERFACE=usb0
++	elif [ -r "$CONFIGFS/g1/UDC" ] && [ -n "$(cat $CONFIGFS/g1/UDC)" ]; then
+ 		INTERFACE="$(
+ 			cat "$CONFIGFS/g1/functions/$usb_network_function/ifname" 2>/dev/null ||
+ 			cat "$CONFIGFS/g1/functions/$usb_network_function_fallback/ifname" 2>/dev/null ||

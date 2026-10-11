@@ -1,0 +1,14 @@
+# Buildroot package override file: copy to local.mk to use.
+#
+# nerves_defconfig sets BR2_PACKAGE_OVERRIDE_FILE to
+# ${NERVES_DEFCONFIG_DIR}/local.mk. Buildroot -includes it, so having no
+# local.mk is the normal case: the kernel is then fetched from the pinned
+# commit in nerves_defconfig and builds are reproducible.
+#
+# Point <PKG>_OVERRIDE_SRCDIR at a local checkout to build that package from
+# your working tree instead. Buildroot rsyncs the tree rather than unpacking
+# the tarball, and does not apply patches/linux: the checkout must carry the
+# board commits (the port's linux tree, branch port/s3ve3g, does). A firmware
+# built this way is not reproducible by anyone else.
+
+# LINUX_OVERRIDE_SRCDIR = $(HOME)/Projects/galaxy_s3_neo/ports/samsung-s3ve3g/linux

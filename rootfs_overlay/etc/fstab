@@ -1,0 +1,8 @@
+# Informational: the mounts are issued by erlinit (see the -m lines in
+# /etc/erlinit.config).
+
+# <fs>                <mountpoint>      <type>  <options>                                <dump> <pass>
+/dev/nerves-boot      /boot             ext2    ro,nodev,noexec,nosuid                   0 0
+/dev/nerves-app       /root             f2fs    nodev                                    0 0
+/dev/nerves-apnhlos   /mnt/apnhlos      vfat    ro,nodev,noexec,nosuid,shortname=lower   0 0
+/dev/nerves-system    /mnt/system       ext4    ro,nodev,noexec,nosuid,noload            0 0

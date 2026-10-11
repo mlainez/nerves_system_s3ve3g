@@ -1,0 +1,155 @@
+From 86678c49afaf12f375697c8601f5f932aac4791b Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Sun, 11 Oct 2026 23:59:46 +0200
+Subject: [PATCH] Resolve the Nerves partitions by GPT name
+
+---
+ .../share/citronics-initramfs/functions.sh    | 90 ++++++++++++++++++-
+ initramfs/usr/share/citronics-initramfs/init  | 13 ++-
+ 2 files changed, 97 insertions(+), 6 deletions(-)
+
+diff --git a/initramfs/usr/share/citronics-initramfs/functions.sh b/initramfs/usr/share/citronics-initramfs/functions.sh
+index b01b959..d47634d 100755
+--- a/initramfs/usr/share/citronics-initramfs/functions.sh
++++ b/initramfs/usr/share/citronics-initramfs/functions.sh
+@@ -317,6 +317,92 @@ has_unallocated_space() {
+             head -n1 | grep -qi "free space"
+ }
+ 
++# Resolve a GPT partition name to its device node.
++#
++# /dev/disk/by-partlabel does not exist this early — udev is not running —
++# so read PARTNAME out of each block device's uevent instead. This is the
++# same trick postmarketOS's msm-firmware-loader uses for the same reason.
++nerves_find_partition() {
++    local want="$1" part devname partname
++    for part in /sys/block/mmcblk*/mmcblk*p* /sys/block/sd*/sd*; do
++        [ -e "$part/uevent" ] || continue
++        partname=$(sed -n 's/^PARTNAME=//p' "$part/uevent")
++        [ "$partname" = "$want" ] || continue
++        devname=$(sed -n 's/^DEVNAME=//p' "$part/uevent")
++        [ -n "$devname" ] || continue
++        echo "/dev/$devname"
++        return 0
++    done
++    return 1
++}
++
++# Map the Nerves layout that lives nested inside a stock Android partition,
++# and publish stable aliases for its pieces.
++#
++# The whole firmware image (MBR, U-Boot env, boot A/B, rootfs A/B and the
++# application data) is flashed raw into the stock `userdata` partition,
++# because the Samsung bootloader chain cannot be repartitioned. On the
++# GT-I9301I `userdata` is mmcblk0p26 today, but the number is a property of
++# the GPT, not of this system, so the base device is looked up by GPT name,
++# given on the kernel command line as `nerves_base=`, and everything
++# downstream refers to /dev/nerves-* instead of a hardcoded /dev/mmcblk0pNN.
++#
++# fwup rewrites the nested MBR on every upgrade so that subpartitions 1, 2
++# and 3 always describe the slot that is about to run. That is why this
++# only ever looks at p1/p2/p3 and never has to work out which slot is live.
++nerves_setup_partitions() {
++    local want base b i
++
++    want=$(get_kernel_param "nerves_base")
++    [ -n "$want" ] || return 1
++
++    # MMC probing is asynchronous: on a cold boot the eMMC and its
++    # partitions may not have shown up in sysfs yet. Upstream's
++    # map_and_resize_root_partition waits ten seconds for the device for
++    # the same reason; wait here too, or the very first boot loses a race
++    # it will win every time afterwards.
++    i=0
++    while [ "$i" -lt 30 ]; do
++        base=$(nerves_find_partition "$want") && break
++        [ "$i" = 0 ] && echo_kmsg "Waiting for a partition named '$want'..."
++        i=$((i + 1))
++        sleep 1
++    done
++
++    if [ -z "${base:-}" ]; then
++        echo_kmsg "No partition named '$want' — falling back to rootfs= on the cmdline"
++        return 1
++    fi
++    echo_kmsg "Nerves base partition '$want' is $base"
++
++    kpartx -asf "$base"
++
++    b=${base#/dev/}
++    ln -sf "$base" /dev/nerves-userdata
++    # Nerves Runtime and official systems address the firmware container
++    # through this conventional alias. Publish both names so automatic
++    # fwup operations work without target-specific application config.
++    ln -sf "$base" /dev/rootdisk0
++    ln -sf "/dev/mapper/${b}p1" /dev/nerves-boot
++    ln -sf "/dev/mapper/${b}p2" /dev/nerves-rootfs
++    ln -sf "/dev/mapper/${b}p3" /dev/nerves-app
++
++    # Stock Android partitions holding firmware that only exists on this
++    # phone and may not be redistributed: the WCNSS (Wi-Fi/Bluetooth) image
++    # on apnhlos, its NV calibration on system, the MAC addresses on efs,
++    # and the modem images. Only aliases are made here; nothing is mounted.
++    # A missing partition just leaves no alias, and erlinit carries on past
++    # a mount that fails.
++    for part in apnhlos modem system efs persist; do
++        dev=$(nerves_find_partition "$part") && \
++            ln -sf "$dev" "/dev/nerves-$part"
++    done
++
++    NERVES_ROOTFS=/dev/nerves-rootfs
++    NERVES_BOOTPART=/dev/nerves-boot
++    return 0
++}
++
+ map_and_resize_root_partition() {
+     local rootfs part_num rootfs_path base_device mapper_path output
+     local timeout=10
+@@ -377,7 +463,7 @@ map_and_resize_root_partition() {
+ 
+ mount_rootfs() {
+     local rootfs
+-    rootfs=$(get_kernel_param "rootfs")
++    rootfs="${NERVES_ROOTFS:-$(get_kernel_param "rootfs")}"
+     # Wait for the rootfs device to be available, with a timeout of 10 seconds
+     local rootfs_device="$rootfs"
+     local timeout=20
+@@ -396,7 +482,7 @@ mount_rootfs() {
+ 
+ mount_boot_partition() {
+     local boot_partition
+-    boot_partition=$(get_kernel_param "bootpart")
++    boot_partition="${NERVES_BOOTPART:-$(get_kernel_param "bootpart")}"
+ 
+     # Remove the /dev/ prefix if present
+     boot_partition=${boot_partition#/dev/}
+diff --git a/initramfs/usr/share/citronics-initramfs/init b/initramfs/usr/share/citronics-initramfs/init
+index ee36f0d..7324f4c 100755
+--- a/initramfs/usr/share/citronics-initramfs/init
++++ b/initramfs/usr/share/citronics-initramfs/init
+@@ -37,16 +37,21 @@ if [ "$debug_console" = "1" ]; then
+     fail_halt_boot
+ fi
+ 
+-rootfs=$(get_kernel_param "rootfs")
++echo_kmsg "Resolving the Nerves partitions..."
++nerves_setup_partitions || true
++
++rootfs="${NERVES_ROOTFS:-$(get_kernel_param "rootfs")}"
+ if [ -n "$rootfs" ]; then
+-    echo_kmsg "Attempting to map and if needed, resize rootfs partition..."
+-    map_and_resize_root_partition
++    if [ -z "$NERVES_ROOTFS" ]; then
++        echo_kmsg "Attempting to map and if needed, resize rootfs partition..."
++        map_and_resize_root_partition
++    fi
+ 
+     echo_kmsg "Mounting rootfs partition..."
+     mount_rootfs
+ 
+     if grep -q " /sysroot " /proc/mounts; then
+-        bootpart=$(get_kernel_param "bootpart")
++        bootpart="${NERVES_BOOTPART:-$(get_kernel_param "bootpart")}"
+         if [ -n "$bootpart" ]; then
+             echo_kmsg "Mounting boot partition..."
+             mount_boot_partition

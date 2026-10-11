@@ -1,0 +1,122 @@
+#!/bin/sh
+# Bring up the hardware whose firmware lives on the phone's own partitions.
+#
+# erlinit is PID 1 and starts the BEAM; there is no init system. erlinit
+# runs this script through --pre-run-exec (see /etc/erlinit.config), after
+# its -m mounts and before Erlang starts. The order below is the point:
+#
+#   1. link the firmware found on the read-only stock partitions into a
+#      tmpfs, under the names the kernel drivers ask for
+#   2. point the kernel firmware loader at that tmpfs
+#   3. only then load the drivers that request it
+#
+# The firmware cannot be shipped in the image: the WCNSS images and their
+# NV calibration are Qualcomm/Samsung files that may not be redistributed,
+# and they are already on every phone. erlinit mounts the partitions:
+#
+#   /mnt/apnhlos  apnhlos (vfat): image/wcnss.mdt, wcnss.b00 ... wcnss.b09
+#   /mnt/system   system (ext4, stock Android 4.4):
+#                 etc/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
+#
+# firmware_class.path is searched before /lib/firmware, so this adds to the
+# shipped firmware (regulatory.db) rather than replacing it.
+#
+# The MAC addresses are on efs, which holds the phone's IMEI and radio
+# calibration and is never written: it is mounted read-only with `noload`
+# (no ext4 journal replay) only long enough to copy two small text files to
+# /run/s3ve3g, where the application's VintageNet configuration reads them.
+#
+# Exits 0 whatever happens: a phone without Wi-Fi still boots, and a
+# non-zero exit here would stop the BEAM from starting.
+
+set -u
+
+FWDIR=/run/firmware
+STATE=/run/s3ve3g
+PARAM=/sys/module/firmware_class/parameters/path
+
+# Log to the kernel ring buffer as well as the console, so the result is
+# still readable with `dmesg | grep s3ve3g-bringup` after the console
+# scrolled, and in ramoops after a reboot into lk2nd.
+log() {
+	echo "s3ve3g-bringup: $*"
+	[ -w /dev/kmsg ] && echo "s3ve3g-bringup: $*" > /dev/kmsg 2>/dev/null
+	return 0
+}
+
+mkdir -p "$FWDIR/wlan/prima" "$STATE"
+
+# --- WCNSS (Pronto) Wi-Fi and Bluetooth -----------------------------------------
+# qcom_wcnss_pil asks for wcnss.mdt, then the split segments next to it.
+# The segment numbers have gaps on this phone (no b03, b05); link whatever
+# exists. vfat is mounted with shortname=lower, so the names are lower case.
+wcnss=0
+for dir in /mnt/apnhlos/image /mnt/apnhlos/IMAGE; do
+	[ -f "$dir/wcnss.mdt" ] || continue
+	for f in "$dir"/wcnss.mdt "$dir"/wcnss.b[0-9][0-9]; do
+		[ -f "$f" ] && ln -sf "$f" "$FWDIR/${f##*/}"
+	done
+	wcnss=1
+	log "WCNSS image: $dir/wcnss.mdt ($(ls "$dir" | grep -c '^wcnss\.b') segments)"
+	break
+done
+[ "$wcnss" = 1 ] || log "no wcnss.mdt under /mnt/apnhlos/image; Wi-Fi and Bluetooth stay off"
+
+nv=""
+for f in /mnt/system/etc/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin \
+	 /mnt/system/vendor/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin; do
+	if [ -f "$f" ]; then
+		nv=$f
+		break
+	fi
+done
+if [ -n "$nv" ]; then
+	ln -sf "$nv" "$FWDIR/wlan/prima/WCNSS_qcom_wlan_nv.bin"
+	log "WCNSS NV: $nv"
+else
+	log "no WCNSS_qcom_wlan_nv.bin under /mnt/system; wcn36xx will fail to start"
+fi
+
+if [ -w "$PARAM" ]; then
+	printf "%s" "$FWDIR" > "$PARAM"
+	log "firmware_class.path set to $FWDIR"
+else
+	log "cannot write $PARAM"
+fi
+
+# --- MAC addresses from efs (read-only) ---------------------------------------------
+if [ -e /dev/nerves-efs ]; then
+	mkdir -p "$STATE/efs"
+	if mount -t ext4 -o ro,noload,nodev,noexec,nosuid /dev/nerves-efs "$STATE/efs" 2>/dev/null; then
+		for pair in "wifi/.mac.info:wlan0.mac" "bluetooth/bt_addr:bt.mac"; do
+			src=$STATE/efs/${pair%%:*}
+			dst=$STATE/${pair##*:}
+			if [ -f "$src" ]; then
+				head -c 17 "$src" > "$dst"
+				log "${pair##*:}: $(cat "$dst")"
+			fi
+		done
+		umount "$STATE/efs"
+	else
+		log "could not mount efs read-only; MAC addresses come from the firmware"
+	fi
+	rmdir "$STATE/efs" 2>/dev/null
+fi
+
+# --- drivers -------------------------------------------------------------------------
+#   qcom_wcnss_pil  boots the Pronto core (remoteproc), wants wcnss.mdt
+#   wcn36xx         Wi-Fi, binds when Pronto opens its WLAN_CTRL channel;
+#                   wants wlan/prima/WCNSS_qcom_wlan_nv.bin
+#   btqcomsmd       Bluetooth over the same core
+# Pronto probes asynchronously; VintageNet handles wlan0 appearing later.
+if [ "$wcnss" = 1 ]; then
+	for mod in qcom_wcnss_pil wcn36xx btqcomsmd; do
+		if modprobe "$mod" 2>/dev/null; then
+			log "loaded $mod"
+		else
+			log "could not load $mod"
+		fi
+	done
+fi
+
+exit 0

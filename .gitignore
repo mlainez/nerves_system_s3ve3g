@@ -1,0 +1,25 @@
+/_build
+/deps
+/cover
+/doc
+/.fetch
+/.nerves
+build.log
+archive.log
+*.fw
+*.img
+erl_crash.dump
+*.ez
+*.tar.gz
+/buildroot-*
+
+# Buildroot package overrides: developer-local paths only.
+# See local.mk.example.
+/local.mk
+
+# Firmware copied off a phone. Not redistributable and different on every
+# unit; the system reads it from the phone's own partitions at boot.
+/firmware-local/
+
+# Editor / tooling state
+/.claude/
