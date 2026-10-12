@@ -93,7 +93,7 @@ if [ -e /dev/nerves-efs ]; then
 			src=$STATE/efs/${pair%%:*}
 			dst=$STATE/${pair##*:}
 			if [ -f "$src" ]; then
-				head -c 17 "$src" > "$dst"
+				dd if="$src" of="$dst" bs=17 count=1 2>/dev/null
 				log "${pair##*:}: $(cat "$dst")"
 			fi
 		done
