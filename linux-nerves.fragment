@@ -51,3 +51,6 @@ CONFIG_USB_ETH=y
 # loaded in that order by s3ve3g-bringup.
 CONFIG_QCOM_SPMI_VADC=m
 CONFIG_BATTERY_QCOM_BMS=m
+
+# The boot logo is a first-light aid from the Buildroot board config
+# CONFIG_LOGO is not set
