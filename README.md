@@ -18,13 +18,116 @@ Qualcomm MSM8228 (msm8226 family), armv7.
 
 ## Status
 
-The layout and the fwup tasks are checked on the host
-(`scripts/host-check-fwup.sh`, see [Host checks](#host-checks)). Nothing in
-this system has booted on a phone yet. It is built from the port's
-Buildroot board (`buildroot-android`, board `s3ve3g`), which boots from
-`userdata` through lk2nd with the same kernel, device tree and command
-line, and charges. Wi-Fi is being brought up there; the device tree patch
-for it is included here.
+Boots on a GT-I9301I: IEx on the screen and over ssh, USB networking, Wi-Fi,
+charging and the fuel gauge, A/B upgrades over ssh and `revert`. The layout
+and the fwup tasks are also checked on the host
+(`scripts/host-check-fwup.sh`, see [Host checks](#host-checks)).
+
+## Dependencies
+
+`install.sh` runs on Linux and needs:
+
+| Distribution | Packages |
+| --- | --- |
+| Debian, Ubuntu | `sudo apt install heimdall-flash adb curl coreutils gnupg xz-utils` |
+| Fedora | `sudo dnf install heimdall android-tools curl coreutils gnupg2 xz` |
+| Arch | `sudo pacman -S heimdall android-tools curl coreutils gnupg xz` |
+
+`gzip`, `awk`, `sed` and `od` come with every distribution.
+
+USB access without root, in `/etc/udev/rules.d/51-s3ve3g.rules`:
+
+```
+# Samsung phones: Android (adb) and download mode (heimdall, 04e8:685d)
+SUBSYSTEM=="usb", ATTR{idVendor}=="04e8", MODE="0660", TAG+="uaccess"
+# The phone's USB network under Nerves (0525:a4a2) and the Buildroot port (1d6b:0104)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0525", ATTR{idProduct}=="a4a2", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d6b", ATTR{idProduct}=="0104", TAG+="uaccess"
+```
+
+then `sudo udevadm control --reload && sudo udevadm trigger` and replug the
+phone. Inside a distrobox or toolbox, put the rule on the host: the
+container sees the host's device nodes.
+
+On the phone, once:
+
+- Settings > About device: tap *Build number* seven times, then Settings >
+  Developer options > **USB debugging** on.
+- Plug the phone in and accept the **Allow USB debugging** prompt for this
+  computer (tick *Always allow*).
+- Settings > Security > **Reactivation lock** off, and sign out of the
+  Samsung account: download mode can refuse custom images otherwise.
+- Battery above **50 %**. A good data cable, straight into the computer (no
+  hub, no front-panel port).
+
+## Install
+
+From a stock GT-I9301I (Android 4.4) to Nerves, with one command:
+
+```bash
+./install.sh            # dry run: checks everything, prints the exact commands
+./install.sh --yes      # does it; asks you to type GT-I9301I first
+```
+
+What it does:
+
+1. Checks the host tools, that exactly one phone is on adb, that it is a
+   `GT-I9301I` (`s3ve3g`) with at least 50 % battery.
+2. Downloads the latest release of the firmware repository
+   (`--repo OWNER/NAME`, default `mlainez/hello_s3ve3g`; `--tag` for another
+   one): the Nerves image, `lk2nd-s3ve3g.img` and `SHA256SUMS`, and checks
+   every file against `SHA256SUMS`. Downloads TWRP 3.3.1-1 for `s3ve3g` from
+   dl.twrp.me and checks it against a pinned sha256, the published one and
+   TeamWin's PGP signature (key `95707D42307C9D41D09BF7091D8597D7891A43DF`).
+3. Android -> download mode -> `heimdall flash --RECOVERY` TWRP -> Android ->
+   `adb reboot recovery`.
+4. From TWRP (root), copies `efs`, `modemst1`, `modemst2`, `fsg`, `fsc`,
+   `persist`, `persdata`, `param`, `ssd` and the stock `boot` to
+   `./backups-<serial>-<date>/`, each one hashed on the phone and on the
+   computer, and checks the partition table.
+5. TWRP -> download mode -> `heimdall flash --BOOT lk2nd-s3ve3g.img
+   --USERDATA <image>.img` -> the phone reboots into Nerves; the script waits
+   for its USB network and prints how to connect (`ssh nerves.local`).
+
+Read this before `--yes`:
+
+- **KNOX:** the first unofficial RECOVERY or BOOT image (TWRP here) sets the
+  warranty bit, an e-fuse. It cannot be undone; reflashing Samsung firmware
+  does not reset it.
+- **Everything on the phone is erased** (`userdata`).
+- There is **no bootloader unlock** on this phone, and none is needed:
+  Samsung's bootloader warns about unsigned BOOT/RECOVERY images and starts
+  them anyway.
+- The script writes RECOVERY, BOOT and USERDATA only. Never the
+  bootloaders, never a PIT (`--repartition`/`--pit`), never a whole Odin
+  tar: the stock AP tar would overwrite this phone's `persist` calibration.
+- The stock recovery is not backed up: it can only be read with root, which
+  needs TWRP in its place first. Samsung's firmware has it (`recovery.img`
+  in the AP tar).
+
+If a step fails, the script stops and says what state the phone is in and
+how to go on. It can be run again from TWRP: it then skips step 3.
+
+TWRP is downloaded from twrp.me, never redistributed. lk2nd is
+[msm8916-mainline/lk2nd](https://github.com/msm8916-mainline/lk2nd) 23.1
+with an `s3ve3g` device entry (MIT and BSD-3-Clause, see its `LICENSE` and
+`lk2nd/LICENSE`); each release carries those notices and names the lk2nd
+commit it was built from.
+
+## Back to Android
+
+Download mode (Volume Down + Home + Power, Volume Up at the warning), then:
+
+```bash
+heimdall flash --BOOT backups-<serial>-<date>/boot.img
+```
+
+and from TWRP (Volume Up + Home + Power), *Wipe > Format Data*, then reboot:
+Android starts as after a factory reset. For the stock recovery as well,
+`heimdall flash --RECOVERY recovery.img` with the `recovery.img` of
+Samsung's firmware for the GT-I9301I. The backed-up partitions are never
+written by this system, so they only matter if something else damages them;
+they go back from TWRP with `dd`.
 
 ## Using
 
@@ -227,7 +330,6 @@ validate, prevent-revert, grow-app and factory-reset.
 
 ## Known gaps
 
-- Not yet booted on a phone.
 - No automatic fallback to the previous slot (lk2nd has no boot counter).
 - Charging stays at a 500 mA input limit for every cable; the temperature
   policy Samsung enforced in software is not implemented.
