@@ -9,11 +9,12 @@ Qualcomm MSM8228 (msm8226 family), armv7.
 | Memory | 1.5 GB |
 | Storage | 16 GB eMMC; firmware lives inside the stock `userdata` partition |
 | Display | 720x1280 AMOLED, via the bootloader's framebuffer and simpledrm |
-| Linux | [`msm8226-mainline/linux`](https://github.com/msm8226-mainline/linux) `v6.16.12-msm8226-u2` + board device tree patches |
+| Linux | [`msm8226-mainline/linux`](https://github.com/msm8226-mainline/linux) `v6.16.12-msm8226-u2` + board device tree, charger and fuel gauge patches (`patches/linux`) |
 | Bootloader | Samsung aboot -> lk2nd (on `boot`) -> `extlinux/extlinux.conf` on the boot subpartition |
 | Console | On-device display (`tty1`); ssh over USB (`usb0`, g_ether) |
 | Wi-Fi / BT | WCNSS Pronto + WCN3660 (`wcn36xx`, `btqcomsmd`); firmware read from the phone's own partitions |
 | Charging | PM8226 SMBB charger, 500 mA input limit |
+| Battery | PM8226 BMS1 fuel gauge (`qcom_bms`, power supply `qcom-bms`) |
 
 ## Status
 
@@ -196,7 +197,8 @@ runs through erlinit's `--pre-run-exec`, after the mounts and before Erlang:
 2. point `firmware_class.path` at it;
 3. copy the Wi-Fi and Bluetooth MAC addresses from `efs` (mounted read-only
    with `noload` for the copy, then unmounted) to `/run/s3ve3g`;
-4. `modprobe qcom_wcnss_pil wcn36xx btqcomsmd`.
+4. `modprobe qcom_spmi_vadc qcom_bms` (battery ADC, then the fuel gauge);
+5. `modprobe qcom_wcnss_pil wcn36xx btqcomsmd`.
 
 It always exits 0; `dmesg | grep s3ve3g-bringup` shows what it found.
 nerves_uevent loads other modules by alias as devices appear;
@@ -229,7 +231,7 @@ validate, prevent-revert, grow-app and factory-reset.
 - No automatic fallback to the previous slot (lk2nd has no boot counter).
 - Charging stays at a 500 mA input limit for every cable; the temperature
   policy Samsung enforced in software is not implemented.
-- No fuel gauge, modem, audio, sensors, touchscreen or GPU.
+- No modem, audio, sensors, touchscreen or GPU.
 - `status` reports the slot that boots next, not the running one, between
   an upgrade and the reboot after it.
 

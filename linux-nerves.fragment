@@ -43,3 +43,11 @@ CONFIG_USB_ETH=y
 # CONFIG_SECURITY_LOCKDOWN_LSM is not set
 # CONFIG_SECURITY_LOCKDOWN_LSM_EARLY is not set
 # CONFIG_MODULE_SIG is not set
+
+# --- Battery fuel gauge --------------------------------------------------------
+#
+# qcom_bms (patches/linux) reads the PM8226 BMS1 coulomb counter and the
+# battery voltage and thermistor through the PM8226 VADC. Both are modules,
+# loaded in that order by s3ve3g-bringup.
+CONFIG_QCOM_SPMI_VADC=m
+CONFIG_BATTERY_QCOM_BMS=m

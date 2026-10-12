@@ -1,5 +1,6 @@
 #!/bin/sh
-# Bring up the hardware whose firmware lives on the phone's own partitions.
+# Bring up the hardware whose firmware lives on the phone's own partitions,
+# and the battery fuel gauge.
 #
 # erlinit is PID 1 and starts the BEAM; there is no init system. erlinit
 # runs this script through --pre-run-exec (see /etc/erlinit.config), after
@@ -102,6 +103,19 @@ if [ -e /dev/nerves-efs ]; then
 	fi
 	rmdir "$STATE/efs" 2>/dev/null
 fi
+
+# --- battery fuel gauge -------------------------------------------------------------
+#   qcom_spmi_vadc  PM8226 voltage ADC: battery voltage, thermistor, references
+#   qcom_bms        BMS1 fuel gauge (power_supply "qcom-bms"), reads the VADC
+# Neither needs firmware. The gauge defers its probe until the VADC is there,
+# so the order only saves a probe retry.
+for mod in qcom_spmi_vadc qcom_bms; do
+	if modprobe "$mod" 2>/dev/null; then
+		log "loaded $mod"
+	else
+		log "could not load $mod"
+	fi
+done
 
 # --- drivers -------------------------------------------------------------------------
 #   qcom_wcnss_pil  boots the Pronto core (remoteproc), wants wcnss.mdt
