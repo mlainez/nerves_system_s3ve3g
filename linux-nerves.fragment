@@ -116,3 +116,12 @@ CONFIG_NLS_CODEPAGE_850=y
 
 # The boot logo is a first-light aid from the Buildroot board config
 # CONFIG_LOGO is not set
+
+# The screen is the console without a USB cable. extlinux.conf turns it to
+# landscape (fbcon=rotate:1, FRAMEBUFFER_CONSOLE_ROTATION is in the base
+# config) and selects Terminus 16x32: 80x22 characters on the 1280x720
+# rotated panel, readable at arm's length, as on nerves_system_fairphone2.
+CONFIG_FONTS=y
+CONFIG_FONT_8x8=y
+CONFIG_FONT_8x16=y
+CONFIG_FONT_TER16x32=y
