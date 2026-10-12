@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Mon, 12 Oct 2026 10:33:16 +0200
+Subject: [PATCH] Do not start mdev
+
+BusyBox is built without the mdev daemon, so `mdev -d` only prints its
+usage on the console and never runs. devtmpfs provides the device nodes
+this init uses.
+---
+ initramfs/usr/share/citronics-initramfs/init | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/initramfs/usr/share/citronics-initramfs/init b/initramfs/usr/share/citronics-initramfs/init
+index 7324f4c..3b0b317 100755
+--- a/initramfs/usr/share/citronics-initramfs/init
++++ b/initramfs/usr/share/citronics-initramfs/init
+@@ -22,15 +22,9 @@ mount_proc_sys_dev
+ echo_kmsg "Setup firmware path..."
+ setup_firmware_path
+ 
+-echo_kmsg "Launch mdev..."
+-setup_mdev
+-
+ echo_kmsg "Load relevant modules...."
+ load_modules /lib/modules/initramfs.load
+ 
+-echo_kmsg "Kill mdev since it's not needed anymore..."
+-kill mdev 2>/dev/null
+-
+ debug_console=$(get_kernel_param "debug_console")
+ if [ "$debug_console" = "1" ]; then
+     echo_kmsg "debug_console=1 detected on cmdline — skipping rootfs mount and falling back to debug console."
