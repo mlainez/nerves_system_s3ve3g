@@ -5,7 +5,8 @@
 # config-postmarketos-qcom-msm8226.armv7 saved with savedefconfig, plus the
 # board's display, USB gadget, MUIC, reboot-mode and charger changes. It is
 # kept verbatim so the Buildroot port and this system stay comparable; the
-# Nerves deltas live here.
+# Nerves deltas live here. They follow the official nerves-project systems
+# (rpi0/rpi4/rpi5, bbb, x86_64) except where this phone needs otherwise.
 #
 # Buildroot merges this on top and runs `olddefconfig`, so anything whose
 # dependencies are unmet is dropped rather than breaking the build.
@@ -16,11 +17,21 @@
 # 50 MiB lk2nd loads them into. squashfs is the rootfs, f2fs the application
 # data that erlinit mounts before anything runs modprobe. The boot slots are
 # ext2, mounted by the ext4 driver (EXT2_FS is off, EXT4_USE_FOR_EXT2=y).
+# The GPT parser (EFI_PARTITION) stays: the initramfs finds `userdata` by its
+# GPT name.
 CONFIG_SQUASHFS=y
 CONFIG_SQUASHFS_LZ4=y
 CONFIG_F2FS_FS=y
 CONFIG_BLK_DEV_DM=y
 CONFIG_RD_GZIP=y
+
+# `mix firmware` rebuilds the rootfs with mksquashfs' default gzip (as for
+# every Nerves system), so ZLIB is the decompressor the phone boots with; LZ4
+# reads Buildroot's own rootfs.squashfs. As in the official systems:
+# decompress straight into the page cache, one decompressor per CPU.
+CONFIG_SQUASHFS_ZLIB=y
+CONFIG_SQUASHFS_FILE_DIRECT=y
+CONFIG_SQUASHFS_COMPILE_DECOMP_MULTI_PERCPU=y
 
 # --- USB networking ----------------------------------------------------------
 #
@@ -51,6 +62,57 @@ CONFIG_USB_ETH=y
 # loaded in that order by s3ve3g-bringup.
 CONFIG_QCOM_SPMI_VADC=m
 CONFIG_BATTERY_QCOM_BMS=m
+
+# --- Reliability, as in every official system ---------------------------------
+#
+# nerves_heart pets the KPSS watchdog (QCOM_WDT); once opened it cannot be
+# stopped, so a hung BEAM or a killed heart resets the phone.
+CONFIG_WATCHDOG_NOWAYOUT=y
+CONFIG_PANIC_TIMEOUT=10
+CONFIG_SCHED_AUTOGROUP=y
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_FANOTIFY=y
+
+# --- Networking, as in the official systems -------------------------------------
+#
+# IPv6 is built in: VintageNet and mdns_lite expect it without a modprobe.
+CONFIG_IPV6=y
+# CONFIG_IPV6_SIT is not set
+CONFIG_IP_MULTICAST=y
+CONFIG_MPTCP=y
+# CONFIG_INET_DIAG is not set
+
+# --- Filesystems -------------------------------------------------------------
+#
+# Kept: ext4 (boot slots, stock `system`, `efs`), vfat (`apnhlos`), f2fs,
+# squashfs, tmpfs, pstore. Dropped: the desktop and network filesystems
+# postmarketOS carries as modules, which only inflate the rootfs.
+# CONFIG_NETWORK_FILESYSTEMS is not set
+# CONFIG_EXT3_FS is not set
+# CONFIG_BTRFS_FS is not set
+# CONFIG_XFS_FS is not set
+# CONFIG_NTFS3_FS is not set
+# CONFIG_ISO9660_FS is not set
+# CONFIG_UDF_FS is not set
+# CONFIG_AUTOFS_FS is not set
+# CONFIG_QUOTA is not set
+CONFIG_NLS_DEFAULT="utf8"
+CONFIG_NLS_CODEPAGE_850=y
+
+# --- postmarketOS userspace support that Nerves does not use ------------------
+# CONFIG_ANDROID_BINDER_IPC is not set
+# CONFIG_ZRAM is not set
+
+# --- Debugging ---------------------------------------------------------------
+#
+# The tracing and preemption checks of a development kernel go, as in the
+# official systems. debugfs, dynamic debug, magic SysRq and pstore stay:
+# drivers on this phone are still being brought up.
+# CONFIG_FTRACE is not set
+# CONFIG_KPROBES is not set
+# CONFIG_DEBUG_PREEMPT is not set
+# CONFIG_KALLSYMS_ALL is not set
+# CONFIG_LOCALVERSION_AUTO is not set
 
 # The boot logo is a first-light aid from the Buildroot board config
 # CONFIG_LOGO is not set
