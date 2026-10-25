@@ -304,14 +304,6 @@ nerves_uevent loads other modules by alias as devices appear;
 `/etc/modprobe.d/s3ve3g-display.conf` keeps `msm` and the panel drivers
 from taking the display over from simpledrm.
 
-## Erlang/OTP
-
-`patches/erlang/29.0.6` backports OTP-20371 (erlang/otp#11616) to the
-ssh 6.0.5 of OTP 29.0.6: without it the daemon refuses a subsystem
-request (`sftp`, `fwup`, so `mix upload`) after the `env` requests OpenSSH
-sends for `SendEnv LANG LC_*`. Buildroot only applies it to 29.0.6; OTP
-29.1.1 (nerves_system_br 1.35.1) carries the fix.
-
 ## Host checks
 
 ```bash
