@@ -93,6 +93,14 @@ define CITRONICS_INITRAMFS_INSTALL_TARGET_CMDS
 		ln -sf busybox telnetd && \
 		ln -sf busybox getty
 
+	# Buildroot strips the target tree only when it finalizes it, after
+	# this install step, so the copies above still carry their symbols
+	# (the toolchain's libc alone is 11 MiB unstripped).
+	find $(CITRONICS_INITRAMFS_STAGING) -type f \( -perm /111 -o -name '*.so*' \) | \
+	while read -r f; do \
+		case "$$(head -c 4 "$$f")" in *ELF) $(STRIPCMD) $(STRIP_STRIP_ALL) "$$f" ;; esac; \
+	done
+
 	# No firmware is baked in. lk2nd leaves the panel lit and the kernel
 	# binds it with simpledrm, so nothing requests firmware before
 	# switch_root; the WCNSS images are staged from the phone's own
