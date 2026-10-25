@@ -5,7 +5,6 @@ config BR2_PACKAGE_CITRONICS_INITRAMFS
 	depends on BR2_TOOLCHAIN_HAS_THREADS
 	depends on BR2_INSTALL_LIBSTDCPP
 	select BR2_PACKAGE_BUSYBOX
-	select BR2_PACKAGE_UNUDHCPD
 	select BR2_PACKAGE_MULTIPATH_TOOLS
 	help
 	  Early-boot initramfs. lk2nd loads it alongside the kernel; it

@@ -11,7 +11,7 @@ deviceinfo_name="Samsung Galaxy S III Neo (GT-I9301I)"
 deviceinfo_codename="samsung-s3ve3g"
 deviceinfo_arch="armv7"
 
-# unudhcpd hands the connected host a single address (10.0.42.2, the phone
+# udhcpd hands the connected host a single address (10.0.42.2, the phone
 # being 10.0.42.1) so you can telnet into the initramfs over USB for
 # recovery.
 deviceinfo_disable_dhcpd="false"

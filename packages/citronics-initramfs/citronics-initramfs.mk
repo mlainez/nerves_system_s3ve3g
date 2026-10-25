@@ -11,17 +11,17 @@ CITRONICS_INITRAMFS_SITE = https://github.com/Citronics/initramfs.git
 CITRONICS_INITRAMFS_SITE_METHOD = git
 CITRONICS_INITRAMFS_LICENSE_FILES = LICENSE
 
-CITRONICS_INITRAMFS_DEPENDENCIES = busybox unudhcpd multipath-tools
+CITRONICS_INITRAMFS_DEPENDENCIES = busybox multipath-tools
 
 CITRONICS_INITRAMFS_STAGING = $(@D)/initramfs-root
 CITRONICS_INITRAMFS_SRC_DIR = initramfs/usr/share/citronics-initramfs
 CITRONICS_INITRAMFS_PKG_DIR = $(NERVES_DEFCONFIG_DIR)/packages/citronics-initramfs
 # Only the non-busybox programs the patched init/functions.sh invokes:
-# kpartx (subpartition mapping) and unudhcpd (USB-recovery DHCP). The
-# upstream resize path (parted, resize2fs) is never reached with
-# nerves_base=; everything else is busybox, and would only inflate the
+# kpartx (subpartition mapping). The upstream resize path (parted,
+# resize2fs) is never reached with nerves_base=, and the recovery DHCP
+# server is busybox udhcpd; everything else would only inflate the
 # cpio.gz against lk2nd's 50 MiB boot-memory window.
-CITRONICS_BINARIES = busybox kpartx unudhcpd
+CITRONICS_BINARIES = busybox kpartx
 
 KERNEL_VERSION = $(shell find $(TARGET_DIR)/lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n1)
 

@@ -39,7 +39,7 @@ CONFIG_UNAME=y
 # functions.sh waits for devices with `for i in $(seq 1 $timeout)`; without
 # seq the loop body never runs and the script gives up at once.
 CONFIG_SEQ=y
-# start_unudhcpd checks for a running daemon with pidof.
+# The recovery shell checks for a running udhcpd with pidof.
 CONFIG_PIDOF=y
 CONFIG_FEATURE_PIDOF_SINGLE=y
 CONFIG_FEATURE_PIDOF_OMIT=y

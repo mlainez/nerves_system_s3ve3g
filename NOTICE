@@ -24,8 +24,6 @@ third-party source that is not covered by this repository's license:
     See that project's LICENSE. The patches under
     packages/citronics-initramfs are Apache-2.0 as part of this work.
 
-  * unudhcpd: GPL-3.0, https://gitlab.postmarketos.org/postmarketOS/unudhcpd
-
 No proprietary firmware is part of this repository or of a built image.
 The WCNSS Wi-Fi/Bluetooth images and their calibration are read at boot
 from the phone's own stock partitions (see packages/s3ve3g-firmware).

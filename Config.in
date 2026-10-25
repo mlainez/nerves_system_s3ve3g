@@ -6,6 +6,5 @@ menu "Custom Packages"
 
 source "$NERVES_DEFCONFIG_DIR/packages/citronics-initramfs/Config.in"
 source "$NERVES_DEFCONFIG_DIR/packages/s3ve3g-firmware/Config.in"
-source "$NERVES_DEFCONFIG_DIR/packages/unudhcpd/Config.in"
 
 endmenu

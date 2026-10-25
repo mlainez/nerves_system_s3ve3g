@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Marc Lainez <marc.lainez@gmail.com>
+Date: Sun, 25 Oct 2026 10:54:03 +0100
+Subject: [PATCH] Serve the recovery address with busybox udhcpd
+
+The busybox build already carries udhcpd, so the recovery shell does not
+need a separate DHCP server. A one-address range is what unudhcpd
+provided.
+---
+ .../usr/share/citronics-initramfs/functions.sh   | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+--- a/initramfs/usr/share/citronics-initramfs/functions.sh
++++ b/initramfs/usr/share/citronics-initramfs/functions.sh
+@@ -224,7 +224,7 @@
+ 
+ start_unudhcpd() {
+ 	# Only run once
+-	[ "$(pidof unudhcpd)" ] && return
++	[ "$(pidof udhcpd)" ] && return
+ 
+ 	# Skip if disabled
+ 	# shellcheck disable=SC2154
+@@ -233,7 +233,7 @@
+ 	fi
+ 
+ 	local client_ip="${unudhcpd_client_ip:-10.0.42.2}"
+-	echo_kmsg "Starting unudhcpd with server ip $HOST_IP, client ip: $client_ip"
++	echo_kmsg "Starting udhcpd with server ip $HOST_IP, client ip: $client_ip"
+ 
+ 	# Get usb interface
+ 	usb_network_function="${deviceinfo_usb_network_function:-ncm.usb0}"
+@@ -268,9 +268,16 @@
+ 
+ 	echo_kmsg "  Using interface $INTERFACE"
+ 	echo_kmsg "  Starting the DHCP daemon"
+-	(
+-		unudhcpd -i "$INTERFACE" -s "$HOST_IP" -c "$client_ip"
+-	) &
++	cat > /tmp/udhcpd.conf <<-EOF
++	interface $INTERFACE
++	start $client_ip
++	end $client_ip
++	max_leases 1
++	lease_file /tmp/udhcpd.leases
++	pidfile /tmp/udhcpd.pid
++	opt subnet 255.255.255.0
++	EOF
++	udhcpd -f /tmp/udhcpd.conf &
+ }
+ 
+ setup_usb_configfs_udc() {
