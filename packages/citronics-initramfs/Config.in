@@ -7,10 +7,6 @@ config BR2_PACKAGE_CITRONICS_INITRAMFS
 	select BR2_PACKAGE_BUSYBOX
 	select BR2_PACKAGE_UNUDHCPD
 	select BR2_PACKAGE_MULTIPATH_TOOLS
-	select BR2_PACKAGE_PARTED
-	select BR2_PACKAGE_E2FSPROGS
-	select BR2_PACKAGE_E2FSPROGS_RESIZE2FS
-	select BR2_PACKAGE_UTIL_LINUX_BINARIES
 	help
 	  Early-boot initramfs. lk2nd loads it alongside the kernel; it
 	  finds the stock `userdata` partition by GPT name, maps the Nerves

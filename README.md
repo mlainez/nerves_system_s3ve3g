@@ -278,16 +278,12 @@ unpack Android sparse images). Application data is lost.
 ## Escape routes
 
 1. **The new firmware boots but misbehaves:** `Nerves.Runtime.revert()`.
-2. **The new firmware does not come up:** release Power at the Samsung logo
-   and hold Vol Down: lk2nd's fastboot menu. RAM-boot the port's rescue
-   image (`fastboot boot output/rescue/images/boot.img`), ssh to
-   `10.0.42.1`, and run the *old* slot's own fwup from inside its squashfs
-   (the commands are in the port's `dossier/nerves-design.md`).
-3. **The initramfs cannot mount the rootfs:** it brings up `usb0` at
-   `10.0.42.1` and a telnet shell (`telnet 10.0.42.1`).
-4. **Anything else:** download mode and `heimdall flash --USERDATA` with a
-   known-good image (a Nerves `.img`, or the Buildroot `rootfs.ext2`).
-   `boot` (lk2nd) is never written by this system.
+2. **The initramfs cannot mount the rootfs:** it brings up `usb0` at
+   `10.0.42.1` and a telnet shell (`telnet 10.0.42.1`) to look at `dmesg`
+   and the partitions. To get a working system back, see 3.
+3. **Anything else:** download mode and `heimdall flash --USERDATA` with a
+   known-good Nerves `.img`. `boot` (lk2nd) is never written by this
+   system.
 
 ## Driver bring-up
 

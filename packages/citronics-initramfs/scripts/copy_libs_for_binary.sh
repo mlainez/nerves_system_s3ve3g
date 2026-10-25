@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # Usage:
-# ./copy_libs_recursive.sh <binary> <rootfs> <dest>
+# ./copy_libs_for_binary.sh <binary> <rootfs> <dest> [readelf]
 # Example:
-# ./copy_libs_recursive.sh output/target/usr/sbin/parted output/target initramfs-root
+# ./copy_libs_for_binary.sh output/target/sbin/kpartx output/target initramfs-root
 
 BINARY="$1"
 ROOT="$2"

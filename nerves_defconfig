@@ -26,8 +26,9 @@ BR2_ROOTFS_SKELETON_CUSTOM=y
 BR2_ROOTFS_SKELETON_CUSTOM_PATH="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/skeleton"
 BR2_INIT_NONE=y
 # eudev, not plain devtmpfs. Nothing here runs udevd (erlinit and the OTP
-# release do the work, the initramfs uses busybox mdev), but multipath-tools
-# links against libudev, and multipath-tools is where kpartx comes from.
+# release do the work, the initramfs relies on devtmpfs), but
+# multipath-tools links against libudev, and multipath-tools is where kpartx
+# comes from.
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 BR2_ROOTFS_DEVICE_TABLE="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/device_table.txt"
 BR2_ENABLE_LOCALE_WHITELIST="locale-archive"
@@ -59,12 +60,11 @@ BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
 
 # Busybox / base userland
 BR2_PACKAGE_BUSYBOX_CONFIG="${BR2_EXTERNAL_NERVES_PATH}/board/nerves-common/busybox.config"
-# The applets the citronics initramfs and s3ve3g-bringup need (switch_root,
-# mdev, seq, ln, telnetd, ...) on top of the Nerves base config.
+# The applets the citronics initramfs needs (switch_root, seq, ln, telnetd,
+# ...) on top of the Nerves base config.
 BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="${NERVES_DEFCONFIG_DIR}/busybox-s3ve3g.fragment"
 BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
 BR2_PACKAGE_E2FSPROGS=y
-BR2_PACKAGE_E2FSPROGS_RESIZE2FS=y
 BR2_PACKAGE_F2FS_TOOLS=y
 BR2_PACKAGE_KMOD=y
 BR2_PACKAGE_KMOD_TOOLS=y
@@ -74,7 +74,6 @@ BR2_PACKAGE_CA_CERTIFICATES=y
 # kpartx maps the Nerves subpartitions out of the stock userdata partition,
 # in the initramfs at boot.
 BR2_PACKAGE_MULTIPATH_TOOLS=y
-BR2_PACKAGE_PARTED=y
 
 # Wi-Fi: WCNSS/Pronto with a WCN3660 RF chip, driven by wcn36xx. Firmware
 # comes from the phone's own partitions at boot (s3ve3g-firmware).
@@ -127,5 +126,4 @@ BR2_TARGET_ROOTFS_SQUASHFS4_LZ4=y
 # This system's own packages, see packages/README.md.
 BR2_PACKAGE_CITRONICS_INITRAMFS=y
 BR2_PACKAGE_UNUDHCPD=y
-BR2_PACKAGE_REBOOT_MODE=y
 BR2_PACKAGE_S3VE3G_FIRMWARE=y

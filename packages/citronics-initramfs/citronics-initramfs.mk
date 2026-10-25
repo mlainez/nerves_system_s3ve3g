@@ -11,17 +11,17 @@ CITRONICS_INITRAMFS_SITE = https://github.com/Citronics/initramfs.git
 CITRONICS_INITRAMFS_SITE_METHOD = git
 CITRONICS_INITRAMFS_LICENSE_FILES = LICENSE
 
-CITRONICS_INITRAMFS_DEPENDENCIES = busybox unudhcpd multipath-tools parted
+CITRONICS_INITRAMFS_DEPENDENCIES = busybox unudhcpd multipath-tools
 
 CITRONICS_INITRAMFS_STAGING = $(@D)/initramfs-root
 CITRONICS_INITRAMFS_SRC_DIR = initramfs/usr/share/citronics-initramfs
 CITRONICS_INITRAMFS_PKG_DIR = $(NERVES_DEFCONFIG_DIR)/packages/citronics-initramfs
 # Only the non-busybox programs the patched init/functions.sh invokes:
-# kpartx (subpartition mapping), parted (upstream resize path, unused with
-# nerves_base=) and unudhcpd (USB-recovery DHCP). Everything else is
-# busybox or never called, and would only inflate the cpio.gz against
-# lk2nd's 50 MiB boot-memory window.
-CITRONICS_BINARIES = busybox kpartx parted unudhcpd
+# kpartx (subpartition mapping) and unudhcpd (USB-recovery DHCP). The
+# upstream resize path (parted, resize2fs) is never reached with
+# nerves_base=; everything else is busybox, and would only inflate the
+# cpio.gz against lk2nd's 50 MiB boot-memory window.
+CITRONICS_BINARIES = busybox kpartx unudhcpd
 
 KERNEL_VERSION = $(shell find $(TARGET_DIR)/lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n1)
 
@@ -98,7 +98,7 @@ define CITRONICS_INITRAMFS_INSTALL_TARGET_CMDS
 	# switch_root; the WCNSS images are staged from the phone's own
 	# partitions after the rootfs is up (s3ve3g-bringup).
 
-	# The upstream init uses busybox mdev, not udev: /usr/lib/udev and its
+	# The init relies on devtmpfs for device nodes: /usr/lib/udev and its
 	# libcrypto dependency chain stay out of the cpio.
 
 	(cd $(CITRONICS_INITRAMFS_STAGING) && \

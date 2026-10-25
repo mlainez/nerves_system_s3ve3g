@@ -17,9 +17,5 @@ erl_crash.dump
 # See local.mk.example.
 /local.mk
 
-# Firmware copied off a phone. Not redistributable and different on every
-# unit; the system reads it from the phone's own partitions at boot.
-/firmware-local/
-
 # Editor / tooling state
 /.claude/

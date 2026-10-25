@@ -1,10 +1,8 @@
 # Kernel config fragment for nerves_system_s3ve3g.
 #
-# The base config is linux-6.16.defconfig, the port's Buildroot board config
-# (buildroot-android board/s3ve3g/linux.config): postmarketOS's
+# The base config is linux-6.16.defconfig: postmarketOS's
 # config-postmarketos-qcom-msm8226.armv7 saved with savedefconfig, plus the
-# board's display, USB gadget, MUIC, reboot-mode and charger changes. It is
-# kept verbatim so the Buildroot port and this system stay comparable; the
+# board's display, USB gadget, MUIC, reboot-mode and charger changes. The
 # Nerves deltas live here. They follow the official nerves-project systems
 # (rpi0/rpi4/rpi5, bbb, x86_64) except where this phone needs otherwise.
 #
@@ -37,8 +35,7 @@ CONFIG_SQUASHFS_COMPILE_DECOMP_MULTI_PERCPU=y
 #
 # g_ether, built in, owns the ChipIdea UDC from the moment the SM5502 MUIC
 # reports a cable, both for the initramfs recovery shell and for
-# VintageNetDirect on usb0 in the running system. It replaces the Buildroot
-# port's configfs ACM + NCM gadget.
+# VintageNetDirect on usb0 in the running system.
 CONFIG_USB_ETH=y
 
 # --- Modules -----------------------------------------------------------------
@@ -114,7 +111,7 @@ CONFIG_NLS_CODEPAGE_850=y
 # CONFIG_KALLSYMS_ALL is not set
 # CONFIG_LOCALVERSION_AUTO is not set
 
-# The boot logo is a first-light aid from the Buildroot board config
+# No boot logo: the screen goes straight to the console.
 # CONFIG_LOGO is not set
 
 # The screen is the console without a USB cable. extlinux.conf turns it to
